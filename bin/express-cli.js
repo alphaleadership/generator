@@ -97,6 +97,9 @@ function createApplication (name, dir, options, done) {
     scripts: {
       start: 'node ./bin/www'
     },
+    engines: {
+      node: '>=22.12'
+    },
     dependencies: {
       debug: '~2.6.9',
       express: '~4.17.1'
@@ -115,6 +118,7 @@ function createApplication (name, dir, options, done) {
   app.locals.modules = Object.create(null)
   app.locals.mounts = []
   app.locals.uses = []
+  app.locals.css = options.css
 
   // Request logger
   app.locals.modules.logger = 'morgan'
@@ -129,6 +133,13 @@ function createApplication (name, dir, options, done) {
   app.locals.modules.cookieParser = 'cookie-parser'
   app.locals.uses.push('cookieParser()')
   pkg.dependencies['cookie-parser'] = '~1.4.5'
+
+  // Session and network security
+  pkg.dependencies.aes512 = '^2.0.6'
+  pkg.dependencies.dddos = '^0.1.2'
+  pkg.dependencies['express-blacklist'] = '^1.0.3'
+  pkg.dependencies['express-defend'] = '^1.0.9'
+  pkg.dependencies['safe-blocklist-http-server'] = '^1.0.8'
 
   if (dir !== '.') {
     mkdir(dir, '.')
@@ -210,9 +221,8 @@ function createApplication (name, dir, options, done) {
       pkg.dependencies['less-middleware'] = '~2.2.1'
       break
     case 'sass':
-      app.locals.modules.sassMiddleware = 'node-sass-middleware'
-      app.locals.uses.push("sassMiddleware({\n  src: path.join(__dirname, 'public'),\n  dest: path.join(__dirname, 'public'),\n  indentedSyntax: true, // true = .sass and false = .scss\n  sourceMap: true\n})")
-      pkg.dependencies['node-sass-middleware'] = '0.11.0'
+      app.locals.uses.push('sassMiddleware')
+      pkg.dependencies.sass = '^1.108.1'
       break
     case 'stylus':
       app.locals.modules.stylus = 'stylus'

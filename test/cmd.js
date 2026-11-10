@@ -13,7 +13,7 @@ var validateNpmName = require('validate-npm-package-name')
 
 var APP_START_STOP_TIMEOUT = 10000
 var PKG_PATH = path.resolve(__dirname, '..', 'package.json')
-var BIN_PATH = path.resolve(path.dirname(PKG_PATH), require(PKG_PATH).bin.express)
+var BIN_PATH = path.resolve(path.dirname(PKG_PATH), require(PKG_PATH).bin['express-security'])
 var NPM_INSTALL_TIMEOUT = 300000 // 5 minutes
 var STDERR_MAX_BUFFER = 5 * 1024 * 1024 // 5mb
 var TEMP_DIR = utils.tmpDir()
@@ -70,13 +70,21 @@ describe('express(1)', function () {
         '  "scripts": {\n' +
         '    "start": "node ./bin/www"\n' +
         '  },\n' +
+        '  "engines": {\n' +
+        '    "node": ">=22.12"\n' +
+        '  },\n' +
         '  "dependencies": {\n' +
+        '    "aes512": "^2.0.6",\n' +
         '    "cookie-parser": "~1.4.5",\n' +
+        '    "dddos": "^0.1.2",\n' +
         '    "debug": "~2.6.9",\n' +
         '    "express": "~4.17.1",\n' +
+        '    "express-blacklist": "^1.0.3",\n' +
+        '    "express-defend": "^1.0.9",\n' +
         '    "http-errors": "~1.7.2",\n' +
         '    "jade": "~1.11.0",\n' +
-        '    "morgan": "~1.10.0"\n' +
+        '    "morgan": "~1.10.0",\n' +
+        '    "safe-blocklist-http-server": "^1.0.8"\n' +
         '  }\n' +
         '}\n')
     })
@@ -112,6 +120,25 @@ describe('express(1)', function () {
         request(this.app)
           .get('/')
           .expect(200, /<title>Express<\/title>/, done)
+      })
+
+      it('should set an encrypted session cookie', function (done) {
+        request(this.app)
+          .get('/')
+          .expect(200)
+          .end(function (err, res) {
+            if (err) return done(err)
+            var cookies = res.headers['set-cookie'] || []
+            var session = cookies.filter(function (cookie) {
+              return cookie.indexOf('session=') === 0
+            })[0]
+            assert.ok(session, 'should set a session cookie')
+            assert.ok(/HttpOnly/i.test(session), 'session cookie should be httpOnly')
+            assert.ok(/SameSite=Lax/i.test(session), 'session cookie should be sameSite=lax')
+            var value = session.slice('session='.length, session.indexOf(';'))
+            assert.ok(value.length > 50, 'session cookie should be encrypted')
+            done()
+          })
       })
 
       it('should generate a 404', function (done) {
@@ -348,11 +375,11 @@ describe('express(1)', function () {
         assert.notStrictEqual(ctx.files.indexOf('public/stylesheets/style.sass'), -1, 'should have style.sass file')
       })
 
-      it('should have node-sass-middleware in package dependencies', function () {
+      it('should have sass in package dependencies', function () {
         var file = path.resolve(ctx.dir, 'package.json')
         var contents = fs.readFileSync(file, 'utf8')
         var pkg = JSON.parse(contents)
-        assert.strictEqual(typeof pkg.dependencies['node-sass-middleware'], 'string')
+        assert.strictEqual(typeof pkg.dependencies.sass, 'string')
       })
 
       it('should have installable dependencies', function (done) {

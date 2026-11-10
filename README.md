@@ -57,6 +57,20 @@ This generator can also be further configured with the following command line fl
     -f, --force          force on non-empty directory
     -h, --help           output usage information
 
+## Security
+
+Generated applications require Node.js `>= 22.12` and come with extra protections:
+
+- `safe-blocklist-http-server` wraps the HTTP server with IP blocking, rate limiting and blocking of common attack endpoints (`/wp-admin`, `/.env`, `/.git/config`, ...). The blocklist is persisted in `blocklist.json`.
+- `express-defend`, `express-blacklist` and `dddos` filter suspicious requests inside Express.
+- Sessions are stored in an `HttpOnly` cookie encrypted with authenticated AES-256-GCM via `aes512`.
+
+Set the `SESSION_SECRET` environment variable to keep sessions valid across restarts (a random secret is generated otherwise):
+
+```bash
+$ SESSION_SECRET=your-secret npm start
+```
+
 ## License
 
 [MIT](LICENSE)

@@ -6,7 +6,8 @@
 
 var app = require('../app');
 var debug = require('debug')('<%- name %>:server');
-var http = require('http');
+var path = require('path');
+var SafeHttpServer = require('safe-blocklist-http-server');
 
 /**
  * Get port from environment and store in Express.
@@ -19,15 +20,19 @@ app.set('port', port);
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+var server = new SafeHttpServer('http', port, path.join(__dirname, '..', 'blocklist.json'), app, {
+  expiryTime: 60000,
+  timeLimit: 60000,
+  requestLimit: 100
+});
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+server.server.on('error', onError);
+server.server.on('listening', onListening);
+server.listen();
 
 /**
  * Normalize a port into a number, string, or false.
@@ -82,7 +87,7 @@ function onError(error) {
  */
 
 function onListening() {
-  var addr = server.address();
+  var addr = server.server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
